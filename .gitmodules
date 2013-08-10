@@ -1,0 +1,6 @@
+[submodule "modules/nr-audio-lib"]
+	path = modules/nr-audio-lib
+	url = git@github.com:NealRame/nr-audio-lib.git
+[submodule "modules/nr-graph-lib"]
+	path = modules/nr-graph-lib
+	url = git@github.com:NealRame/nr-graph-lib.git
