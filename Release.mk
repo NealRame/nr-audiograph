@@ -4,6 +4,7 @@ LDFLAGS  += -L$(CURDIR)
 
 $(TARGET): libnrgraph.a libnraudio.a $(OBJECTS)
 	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+	strip $(TARGET)
 
 libnraudio.a:
 	$(MAKE) -C $(MODULES_PATH)/nr-audio-lib depends Release

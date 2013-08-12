@@ -30,9 +30,10 @@ public:
 		throw Error(m);
 	}
 public:
-	Error() { }
-	Error(std::string m) : message(m) { }
-	virtual const char * what() const noexcept { return message.data(); }
+	Error() throw() { }
+	Error(std::string m) throw() : message(m) { }
+	~Error() throw() { }
+	virtual const char * what() const throw() { return message.data(); }
 	std::string message;
 };
 

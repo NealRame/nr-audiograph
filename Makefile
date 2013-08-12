@@ -7,7 +7,7 @@ export CFLAGS        = $(COMMON_FLAGS)
 export CXXFLAGS      = $(COMMON_FLAGS) -std=c++11
 export LDFLAGS       = -lnraudio
 export LDFLAGS      += -lnrgraph
-export LDFLAGS      += -lboost_system -lboost_filesystem -lboost_regex -lcairo -lmp3lame
+export LDFLAGS      += -l:libboost_system.a -l:libboost_filesystem.a -l:libboost_regex.a -lcairo -lmp3lame
 export MODULES_PATH  = $(CURDIR)/modules
 export SOURCES      := $(wildcard $(CURDIR)/sources/*.cpp)
 export OBJECTS      := $(patsubst $(CURDIR)/sources/%.cpp,%.o,$(SOURCES))

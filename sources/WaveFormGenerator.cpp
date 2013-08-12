@@ -7,17 +7,17 @@
 
 #include <iostream>
 
+#include <AudioBuffer.h>
+
+#include <GraphColor.h>
+#include <GraphSize.h>
+#include <GraphBrush.h>
+#include <GraphPainter.h>
+#include <GraphPoint.h>
+#include <GraphSurface.h>
+#include <GraphRectangle.h>
+
 #include "WaveFormGenerator.h"
-
-#include "AudioBuffer.h"
-
-#include "GraphColor.h"
-#include "GraphSize.h"
-#include "GraphBrush.h"
-#include "GraphPainter.h"
-#include "GraphPoint.h"
-#include "GraphSurface.h"
-#include "GraphRectangle.h"
 
 namespace com {
 namespace nealrame {

@@ -14,15 +14,15 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include "AudioBuffer.h"
-#include "AudioError.h"
-#include "codec/AudioMP3Decoder.h"
-#include "codec/AudioPCMDecoder.h"
-#include "codec/AudioPCMCoder.h"
+#include <AudioBuffer.h>
+#include <AudioError.h>
+#include <codec/AudioMP3Decoder.h>
+#include <codec/AudioPCMDecoder.h>
+#include <codec/AudioPCMCoder.h>
 
-#include "GraphBrush.h"
-#include "GraphError.h"
-#include "GraphSurface.h"
+#include <GraphBrush.h>
+#include <GraphError.h>
+#include <GraphSurface.h>
 
 #include "Parser.h"
 #include "WaveFormGenerator.h"
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
 
 			std::string opt_name = parser::optionName(arg);
 			std::string opt_value = parser::optionValue(arg);
-
+			
 			if (opt_name.size() > 0) {
 				if (opt_name == "help") {
 					std::cout << usage << std::endl;

@@ -10,14 +10,14 @@
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include <sstream>
 #include <locale>
+#include <sstream>
+
+#include <GraphColor.h>
+#include <GraphGradient.h>
+#include <GraphSize.h>
 
 #include "Parser.h"
-
-#include "GraphColor.h"
-#include "GraphGradient.h"
-#include "GraphSize.h"
 
 namespace com {
 namespace nealrame {
