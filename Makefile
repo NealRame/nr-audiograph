@@ -1,18 +1,25 @@
-export TARGET        = audiograph
-export CC            = g++
-export COMMON_FLAGS  = -Wall -Werror
-export COMMON_FLAGS += -I$(CURDIR)/modules/nr-audio-lib/sources
-export COMMON_FLAGS += -I$(CURDIR)/modules/nr-graph-lib/sources
-export CFLAGS        = $(COMMON_FLAGS)
-export CXXFLAGS      = $(COMMON_FLAGS) -std=c++11
-export LDFLAGS       = -lnraudio
-export LDFLAGS      += -lnrgraph
-export LDFLAGS      += -l:libboost_system.a -l:libboost_filesystem.a -l:libboost_regex.a -lcairo -lmp3lame
-export MODULES_PATH  = $(CURDIR)/modules
-export SOURCES      := $(wildcard $(CURDIR)/sources/*.cpp)
-export OBJECTS      := $(patsubst $(CURDIR)/sources/%.cpp,%.o,$(SOURCES))
-export VPATH        := $(CURDIR)/sources
-export DEPS         := $(CURDIR)/Makefile.depends
+TARGET        = audiograph
+CC            = g++
+COMMON_FLAGS  = -Wall -Werror
+COMMON_FLAGS += -I$(CURDIR)/modules/nr-audio-lib/sources
+COMMON_FLAGS += -I$(CURDIR)/modules/nr-graph-lib/sources
+CFLAGS        = $(COMMON_FLAGS)
+CXXFLAGS      = $(COMMON_FLAGS) -std=c++11
+LDFLAGS       = -lnraudio
+LDFLAGS      += -lnrgraph
+LDFLAGS      += -l:libboost_system.a
+LDFLAGS      += -l:libboost_filesystem.a
+LDFLAGS      += -l:libboost_regex.a
+LDFLAGS      += -lcairo
+LDFLAGS      += -lmp3lame
+MODULES_PATH  = $(CURDIR)/modules
+SOURCES      := $(wildcard $(CURDIR)/sources/*.cpp)
+OBJECTS      := $(patsubst $(CURDIR)/sources/%.cpp,%.o,$(SOURCES))
+VPATH        := $(CURDIR)/sources
+DEPS         := $(CURDIR)/Makefile.depends
+
+export TARGET CC COMMON_FLAGS CFLAGS CXXFLAGS LDFLAGS MODULES_PATH SOURCES
+export OBJECTS VPATH DEPS
 
 .PHONY: all clean Debug depends realclean Release tags
 

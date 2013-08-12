@@ -1,0 +1,33 @@
+{
+	"folders":
+	[
+		{
+			"path": ".",
+			"follow_symlinks": true,
+			"file_exclude_patterns": [ "Makefile.depends", "nr-audiograph.sublime-project", "tags", "*.o" ]
+		}
+	],
+	"settings":
+	{
+		"tab_size": 8,
+		"translate_tabs_to_spaces": false,
+		"sublimeclang_options": [
+			"-I${project_path}/modules/nr-audio-lib/sources",
+			"-I${project_path}/modules/nr-graph-lib/sources"
+		],
+		"sublimeclang_additional_language_options": {
+			"c++": [ "-std=c++11" ]
+		}
+	},
+	"build_systems":
+	[
+		{
+			"name": "proto-ag-parser Debug",
+			"cmd": [ "make", "-C", "$project_path","depends", "Debug" ]
+		},
+		{
+			"name": "proto-ag-parser Release",
+			"cmd": [ "make", "-C", "$project_path", "depends", "Release" ]
+		}
+	]
+}
