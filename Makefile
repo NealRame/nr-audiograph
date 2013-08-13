@@ -9,6 +9,7 @@ LDFLAGS       = -lnraudio
 LDFLAGS      += -lnrgraph
 LDFLAGS      += -l:libboost_system.a
 LDFLAGS      += -l:libboost_filesystem.a
+LDFLAGS      += -l:libboost_program_options.a
 LDFLAGS      += -l:libboost_regex.a
 LDFLAGS      += -lcairo
 LDFLAGS      += -lmp3lame
