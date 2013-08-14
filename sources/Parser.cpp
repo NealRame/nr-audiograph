@@ -5,16 +5,22 @@
  *      Author: jux
  */
 
-#include <boost/algorithm/string.hpp>
-#include <boost/format.hpp>
-#include <boost/regex.hpp>
-#include <boost/lexical_cast.hpp>
-
-#include <locale>
+#include <limits>
+#include <iomanip>
+#include <iostream>
+#include <fstream>
 #include <sstream>
+#include <string>
 
+#include <boost/format.hpp>
+#include <boost/spirit/include/qi.hpp>
+#include <boost/spirit/include/phoenix.hpp>
+#include <boost/fusion/include/adapt_struct.hpp>
+#include <boost/fusion/include/boost_tuple.hpp>
+
+#include <GraphBrush.h>
 #include <GraphColor.h>
-#include <GraphGradient.h>
+#include <GraphLinearGradient.h>
 #include <GraphSize.h>
 
 #include "Parser.h"
@@ -23,111 +29,205 @@ namespace com {
 namespace nealrame {
 namespace parser {
 
-std::string optionName(const std::string &s) {
-	boost::cmatch m;
-	boost::regex re("^-([a-zA-Z0-9][a-zA-Z0-9_\\-]+)(?:=.+)?$");
-	if (boost::regex_match(s.data(), m, re)) {
-		return m[1];
-	}
-	return "";
-}
+#	define BYTE_TO_DOUBLE(VALUE) \
+		static_cast<double>((unsigned char)(VALUE))/std::numeric_limits<unsigned char>::max()
 
-std::string optionValue(const std::string &s) {
-	boost::cmatch m;
-	boost::regex re("^-[a-zA-Z0-9][a-zA-Z0-9_\\-]+=(.+)$");
-	if (boost::regex_match(s.data(), m, re)) {
-		return m[1];
-	}
-	return "";
-}
+	using namespace boost::spirit;
 
-static const char * Base10DigitClass = "[0123456789]";
-static const char * Base16DigitClass = "[0123456789aAbBcCdDeEfF]";
+	typedef boost::tuple<double, double, double, double> RGBA_Attr;
+	typedef boost::tuple<RGBA_Attr, double> GradientStop_Attr;
+	typedef std::vector<GradientStop_Attr> Gradient_Attr;
 
-boost::shared_ptr<graph::Size> readSize(const std::string &s) {
-	const static boost::regex SizeRegex((boost::format("(%1%+)x(%1%+)") % Base10DigitClass).str());
-	boost::cmatch m;
-	if (! boost::regex_match(s.data(), m, SizeRegex)) {
-		return boost::shared_ptr<graph::Size>();
-	}
-	return boost::shared_ptr<graph::Size>(new graph::Size(boost::lexical_cast<double>(m[1]), boost::lexical_cast<double>(m[2])));
-}
-
-
-double fromHtmlRGBComponentString(const std::string &s) {
-	std::stringstream ss;
-	unsigned int v;
-	ss << std::hex << s;
-	ss >> v;
-	return static_cast<double>(v)/255;
-}
-
-boost::shared_ptr<graph::Color> readColor(const std::string &s) {
-	const static std::string decimal((boost::format("\\s*(?:(?:%1%+(?:\\.%1%*)?)|(?:\\.%1%+))\\s*") % Base10DigitClass).str());
-
-	const static boost::regex HTMLLongForm((boost::format("^#(%1%{2})(%1%{2})(%1%{2})$") % Base16DigitClass).str());
-	const static boost::regex HTMLShortForm((boost::format("^#(%1%)(%1%)(%1%)$") % Base16DigitClass).str());
-	const static boost::regex RGBForm((boost::format("^rgb\\((%1%),(%1%),(%1%)\\)$") % decimal).str());
-	const static boost::regex RGBAForm((boost::format("^rgba\\((%1%),(%1%),(%1%),(%1%)\\)$") % decimal).str());
-
-	boost::cmatch m;
-	graph::Color::RGB rgb;
-
-	if (boost::regex_match(s.data(), m, HTMLLongForm)) {
-		rgb.red = fromHtmlRGBComponentString(m[1]);
-		rgb.green = fromHtmlRGBComponentString(m[2]);
-		rgb.blue = fromHtmlRGBComponentString(m[3]);
-		return boost::shared_ptr<graph::Color>(new graph::Color(rgb));
+	com::nealrame::graph::Color rgba_attr_to_color(RGBA_Attr &v) {
+		com::nealrame::graph::Color::RGB rgb = { v.get<0>(), v.get<1>(), v.get<2>() };
+		return graph::Color(rgb, v.get<3>());
 	}
 
-	if (boost::regex_match(s.data(), m, HTMLShortForm)) {
-		rgb.red = fromHtmlRGBComponentString((boost::format("%1%%1%") % m[1]).str());
-		rgb.green = fromHtmlRGBComponentString((boost::format("%1%%1%") % m[2]).str());
-		rgb.blue = fromHtmlRGBComponentString((boost::format("%1%%1%") % m[3]).str());
-		return boost::shared_ptr<graph::Color>(new graph::Color(rgb));
-	}
+	com::nealrame::graph::LinearGradient gradient_attr_to_gradient(Gradient_Attr &v) {
+		com::nealrame::graph::LinearGradient gradient;
 
-	if (boost::regex_match(s.data(), m, RGBForm)) {
-		rgb.red = boost::lexical_cast<double>(boost::algorithm::trim_copy(std::string(m[1])));
-		rgb.green = boost::lexical_cast<double>(boost::algorithm::trim_copy(std::string(m[2])));
-		rgb.blue = boost::lexical_cast<double>(boost::algorithm::trim_copy(std::string(m[3])));
-		if (rgb.red <= 1 && rgb.green <= 1 && rgb.blue <= 1) {
-			return boost::shared_ptr<graph::Color>(new graph::Color(rgb));
+		for (const GradientStop_Attr &stop_attr : v) {
+			RGBA_Attr rgba_attr = stop_attr.get<0>();
+			double offset = stop_attr.get<1>();
+			gradient.addColorStop(offset, rgba_attr_to_color(rgba_attr));
 		}
+
+		return gradient;
 	}
 
-	if (boost::regex_match(s.data(), m, RGBAForm)) {
-		rgb.red = boost::lexical_cast<double>(boost::algorithm::trim_copy(std::string(m[1])));
-		rgb.green = boost::lexical_cast<double>(boost::algorithm::trim_copy(std::string(m[2])));
-		rgb.blue = boost::lexical_cast<double>(boost::algorithm::trim_copy(std::string(m[3])));
-		double alpha = boost::lexical_cast<double>(boost::algorithm::trim_copy(std::string(m[4])));
-		if (rgb.red <= 1 && rgb.green <= 1 && rgb.blue <= 1 && alpha <= 1) {
-			return boost::shared_ptr<graph::Color>(new graph::Color(rgb, alpha));
+	struct hex1_ : qi::symbols<char, double> {
+		hex1_() {
+			for (unsigned int i=0; i<=0x0f; ++i) {
+				add((boost::format("%1x") % i).str(),
+					BYTE_TO_DOUBLE((i << 4) + i));
+			}
 		}
+	} hex1;
+
+	struct hex2_ : qi::symbols<char, double> {
+		hex2_() {
+			for (unsigned int i=0; i<=0xff; ++i) {
+				add((boost::format("%02x") % i).str(),
+					BYTE_TO_DOUBLE(i));
+			}
+		}
+	} hex2;
+
+	template <typename Iterator>
+	struct ColorGrammar : 
+		qi::grammar<Iterator, RGBA_Attr(), ascii::space_type>
+	{
+		static bool parse(Iterator &first, Iterator last, com::nealrame::graph::Brush &brush) {
+			RGBA_Attr value;
+			ColorGrammar<Iterator> grammar;
+			if (! qi::phrase_parse(first, last, grammar, ascii::space, value)) {
+				// find a solution to correctly report an error
+				return false;
+			}
+			brush.setColor(rgba_attr_to_color(value));
+			return true;
+		}
+
+		ColorGrammar() : 
+			ColorGrammar::base_type(color, "color") {
+			using qi::_val;
+			using qi::attr;
+			using qi::lexeme;
+			using qi::lit;
+			using qi::no_case;
+			using boost::phoenix::at_c;
+			using boost::phoenix::construct;
+			using boost::phoenix::val;
+			using boost::phoenix::ref;
+
+			color.name("color");
+			color %= hex_expr | rgb_expr | rgba_expr;
+
+			hex_expr.name("hexadecimal color constant");
+			hex_expr %= // hex_long_expr must be check before hex_short_expr
+				hex_long_expr | hex_short_expr;
+
+			hex_long_expr.name("hexadecimal color constant (long form)");
+			hex_long_expr %=
+				no_case[
+					lexeme[ lit('#')
+						>> (hex2)
+						>> (hex2)
+						>> (hex2)
+						>> attr(1.0)
+					]
+				];
+
+			hex_short_expr.name("hexadecimal color constant (short form)");
+			hex_short_expr %=
+				no_case[
+					lexeme[ lit('#')
+						>> hex1
+						>> hex1
+						>> hex1
+						>> attr(1.0)
+					]
+				];
+
+			rgb_expr.name("RGB color");
+			rgb_expr %=
+				no_case[
+					lit("rgb") >> lit('(')
+					>> double_ [check_RGBA_component]
+					>> lit(',')
+					>> double_ [check_RGBA_component]
+					>> lit(',')
+					>> double_ [check_RGBA_component]
+					>> lit(')')
+					>> attr(1.0)
+				];
+
+			rgba_expr.name("RGBA color");
+			rgba_expr %=
+				no_case[
+					lit("rgba") >> lit('(')
+					>> double_ [check_RGBA_component]
+					>> lit(',')
+					>> double_ [check_RGBA_component]
+					>> lit(',')
+					>> double_ [check_RGBA_component]
+					>> lit(',')
+					>> double_ [check_RGBA_component]
+					>> lit(')')
+				];
+		}
+		
+		qi::rule<Iterator, RGBA_Attr(), ascii::space_type> color;
+		qi::rule<Iterator, RGBA_Attr(), ascii::space_type> hex_expr;
+		qi::rule<Iterator, RGBA_Attr(), ascii::space_type> hex_long_expr;
+		qi::rule<Iterator, RGBA_Attr(), ascii::space_type> hex_short_expr;
+		qi::rule<Iterator, RGBA_Attr(), ascii::space_type> rgb_expr;
+		qi::rule<Iterator, RGBA_Attr(), ascii::space_type> rgba_expr;
+
+	private:
+		static void check_RGBA_component(
+			double const &v, qi::unused_type, bool &ok) {
+			ok = (v >= 0 && v <= 1);
+		}
+	};
+
+	template <typename Iterator>
+	struct GradientGrammar :
+		qi::grammar<Iterator, Gradient_Attr(), ascii::space_type>
+	{
+		static bool parse(Iterator &first, Iterator last, com::nealrame::graph::Brush &brush) {
+			Gradient_Attr value;
+			GradientGrammar<Iterator> grammar;
+			if (! qi::phrase_parse(first, last, grammar, ascii::space, value)) {
+				// find a solution to correctly report an error
+				return false;
+			}
+			brush.setGradient(gradient_attr_to_gradient(value));
+			return true;
+		}
+
+		GradientGrammar() :
+			GradientGrammar::base_type(gradient, "gradient") {
+			using qi::lexeme;
+			using qi::lit;
+			using qi::no_case;
+
+			gradient %=
+				no_case[
+					lit("gradient") 
+					>> lit('(') 
+					>> gradient_stop % lit(',') 
+					>> lit(')')
+				];
+
+			gradient_stop %=
+				color_grammar.color >> double_[check_stop_offset];
+
+		}
+
+		ColorGrammar<Iterator> color_grammar;
+		qi::rule<Iterator, Gradient_Attr(), ascii::space_type> gradient;
+		qi::rule<Iterator, GradientStop_Attr(), ascii::space_type> gradient_stop;
+
+	private:
+		static void check_stop_offset(
+			double const &v, qi::unused_type, bool &ok) {
+			ok = (v >= 0 && v <= 1);
+		}
+	};
+
+	bool parseColor(const std::string &s, com::nealrame::graph::Brush &brush) {
+		std::string::const_iterator it = s.begin(), end = s.end();
+		return ColorGrammar<std::string::const_iterator>::parse(it, end, brush);
 	}
 
-	return boost::shared_ptr<graph::Color>();
-}
-
-boost::shared_ptr<graph::Gradient> readGradient(const std::string &) {
-	const static std::string integer((boost::format("\\s*%1%+\\s*") % Base10DigitClass).str());
-	const static std::string decimal((boost::format("\\s*(?:(?:%1%+(?:\\.%1%*)?)|(?:\\.%1%+))\\s*") % Base10DigitClass).str());
-	const static std::string html_color((boost::format("#(?:(?:(?:%1%{2}){3})|(?:%1%{3}))") % Base16DigitClass).str());
-	const static std::string rgb_color((boost::format("rgb\\(%1%,%1%,%1%\\)") % decimal).str());
-	const static std::string rgba_color((boost::format("rgba\\(%1%,%1%,%1%,%1%\\)") % decimal).str());
-	const static std::string color((boost::format("(?:%1%)|(?:%2%)|(?:%3%)")
-										% html_color % rgb_color % rgba_color).str());
-	const static std::string stop((boost::format("%1%\\s+%2%%") % color % integer).str());
-	const static std::string gradient((boost::format("gradient\\((%1%)(?:,(%1%))\\)") % stop).str());
-
-	std::cerr << gradient << std::endl;
-
-	return boost::shared_ptr<graph::Gradient>();
-}
-
-boost::shared_ptr<graph::Brush> readBrush(const std::string &s) {
-	return boost::shared_ptr<graph::Brush>();
-}
+	bool parseBrush(const std::string &s, com::nealrame::graph::Brush &brush) {
+		if (! parseColor(s, brush)) {
+			std::string::const_iterator it = s.begin(), end = s.end();
+			return GradientGrammar<std::string::const_iterator>::parse(it, end, brush);
+		}
+		return true;
+	}
 
 } /* namespace parser */
 } /* namespace nealrame */

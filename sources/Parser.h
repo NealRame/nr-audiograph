@@ -37,13 +37,8 @@ public:
 	std::string message;
 };
 
-std::string optionName(const std::string &);
-std::string optionValue(const std::string &);
-
-boost::shared_ptr<graph::Size> readSize(const std::string &);
-boost::shared_ptr<graph::Color> readColor(const std::string &);
-boost::shared_ptr<graph::Gradient> readGradient(const std::string &);
-boost::shared_ptr<graph::Brush> readBrush(const std::string &s);
+bool parseColor(const std::string &s, com::nealrame::graph::Brush &);
+bool parseBrush(const std::string &s, com::nealrame::graph::Brush &);
 
 } /* namespace parser */
 } /* namespace nealrame */

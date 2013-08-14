@@ -37,11 +37,19 @@ namespace com {
 namespace nealrame {
 namespace graph {
 void validate(boost::any &v, const std::vector<std::string> &values, Brush *, int) {
-	using namespace boost::program_options;
-	validators::check_first_occurrence(v);
-	validators::get_single_string(values);
-	// const std::string &s = po::validators::get_single_string(values);
-	v = boost::any(Brush(Color::Black));
+	namespace po = boost::program_options;
+	namespace parser = com::nealrame::parser;
+
+	po::validators::check_first_occurrence(v);
+	const std::string &s = po::validators::get_single_string(values);
+
+	Brush brush;
+
+	if (parser::parseBrush(s, brush)) {
+		v = brush;
+	} else {
+	        throw po::validation_error(po::validation_error::invalid_option_value);
+	}
 }
 
 void validate(boost::any &v, const std::vector<std::string> &values, Size *, int) {
