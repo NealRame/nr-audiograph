@@ -90,17 +90,11 @@ graph::Surface * WaveFormGenerator::render(const audio::Buffer &buffer, uint off
 				min = std::min(s, min);
 				max = std::max(s, max);
 			} else {
-				graph::Rectangle rect = (graph::Rectangle(graph::Point(p, h*(max + 1)/2), graph::Point(x, h/2))
-											| graph::Rectangle(graph::Point(p, h/2), graph::Point(x, h*(min + 1)/2))).normalized();
+				graph::Rectangle rect = 
+					(graph::Rectangle(graph::Point(p, h*(max + 1)/2), graph::Point(x, h/2))
+						| graph::Rectangle(graph::Point(p, h/2), graph::Point(x, h*(min + 1)/2))).normalized();
 
-#ifdef DEBUG
-				std::cerr << min << ":" << max << std::endl;
-				std::cerr << "(" << rect.left() << "," << rect.top() << ") " << rect.size().width() << "x" << rect.size().height() << std::endl;
-#endif
-				painter.fillRectangle(graph::Rectangle(graph::Point(p, h*(max + 1)/2), graph::Point(x, h/2)).normalized());
-				painter.fillRectangle(graph::Rectangle(graph::Point(p, h/2), graph::Point(x, h*(min + 1)/2)).normalized());
-
-//				painter.fillRectangle(rect);
+				painter.fillRectangle(rect);
 
 				p = x;
 				min = max = 0;
@@ -112,6 +106,8 @@ graph::Surface * WaveFormGenerator::render(const audio::Buffer &buffer, uint off
 		count -= n;
 		offset += n;
 	}
+
+	painter.drawLine(0, h/2, data->size.width(), h/2);
 
 	return surface;
 }

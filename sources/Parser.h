@@ -8,9 +8,7 @@
 #ifndef PARSER_H_
 #define PARSER_H_
 
-#include <exception>
 #include <string>
-#include <boost/shared_ptr.hpp>
 
 namespace com {
 namespace nealrame {
@@ -24,21 +22,9 @@ class Size;
 
 namespace parser {
 
-class Error : public std::exception {
-public:
-	static void raise(std::string m) {
-		throw Error(m);
-	}
-public:
-	Error() throw() { }
-	Error(std::string m) throw() : message(m) { }
-	~Error() throw() { }
-	virtual const char * what() const throw() { return message.data(); }
-	std::string message;
-};
-
-bool parseColor(const std::string &s, com::nealrame::graph::Brush &);
+bool parseColor(const std::string &s, com::nealrame::graph::Color &);
 bool parseBrush(const std::string &s, com::nealrame::graph::Brush &);
+bool parseSize (const std::string &s, com::nealrame::graph::Size  &);
 
 } /* namespace parser */
 } /* namespace nealrame */

@@ -37,22 +37,27 @@ namespace parser {
 	typedef boost::tuple<double, double, double, double> RGBA_Attr;
 	typedef boost::tuple<RGBA_Attr, double> GradientStop_Attr;
 	typedef std::vector<GradientStop_Attr> Gradient_Attr;
+	typedef boost::tuple<unsigned int, unsigned int> Size_Attr;
 
 	com::nealrame::graph::Color rgba_attr_to_color(RGBA_Attr &v) {
 		com::nealrame::graph::Color::RGB rgb = { v.get<0>(), v.get<1>(), v.get<2>() };
-		return graph::Color(rgb, v.get<3>());
+		return com::nealrame::graph::Color(rgb, v.get<3>());
 	}
 
 	com::nealrame::graph::LinearGradient gradient_attr_to_gradient(Gradient_Attr &v) {
 		com::nealrame::graph::LinearGradient gradient;
-
 		for (const GradientStop_Attr &stop_attr : v) {
 			RGBA_Attr rgba_attr = stop_attr.get<0>();
 			double offset = stop_attr.get<1>();
 			gradient.addColorStop(offset, rgba_attr_to_color(rgba_attr));
 		}
-
 		return gradient;
+	}
+
+	com::nealrame::graph::Size size_attr_to_size(Size_Attr &v) {
+		return com::nealrame::graph::Size(
+				static_cast<double>(v.get<0>()),
+				static_cast<double>(v.get<1>()));
 	}
 
 	struct hex1_ : qi::symbols<char, double> {
@@ -77,14 +82,14 @@ namespace parser {
 	struct ColorGrammar : 
 		qi::grammar<Iterator, RGBA_Attr(), ascii::space_type>
 	{
-		static bool parse(Iterator &first, Iterator last, com::nealrame::graph::Brush &brush) {
+		static bool parse(Iterator &first, Iterator last, com::nealrame::graph::Color &color) {
 			RGBA_Attr value;
 			ColorGrammar<Iterator> grammar;
 			if (! qi::phrase_parse(first, last, grammar, ascii::space, value)) {
 				// find a solution to correctly report an error
 				return false;
 			}
-			brush.setColor(rgba_attr_to_color(value));
+			color = rgba_attr_to_color(value);
 			return true;
 		}
 
@@ -216,17 +221,55 @@ namespace parser {
 		}
 	};
 
-	bool parseColor(const std::string &s, com::nealrame::graph::Brush &brush) {
+	template <typename Iterator>
+	struct SizeGrammar :
+		qi::grammar<Iterator, Size_Attr(), ascii::space_type>
+	{
+		static bool parse(Iterator &first, Iterator last, com::nealrame::graph::Size &size) {
+			Size_Attr value;
+			SizeGrammar<Iterator> grammar;
+			if (! qi::phrase_parse(first, last, grammar, ascii::space, value)) {
+				// find a solution to correctly report an error
+				return false;
+			}
+			size = size_attr_to_size(value);
+			return true;
+		}
+
+		SizeGrammar() :
+			SizeGrammar::base_type(size, "size") {
+			using qi::lexeme;
+			using qi::lit;
+			using qi::no_case;
+
+			size %=
+				no_case[
+					uint_ >> lit('x') >> uint_
+				];
+		}
+
+		qi::rule<Iterator, Size_Attr(), ascii::space_type> size;
+	};
+
+	bool parseColor(const std::string &s, com::nealrame::graph::Color &color) {
 		std::string::const_iterator it = s.begin(), end = s.end();
-		return ColorGrammar<std::string::const_iterator>::parse(it, end, brush);
+		return ColorGrammar<std::string::const_iterator>::parse(it, end, color);
 	}
 
 	bool parseBrush(const std::string &s, com::nealrame::graph::Brush &brush) {
-		if (! parseColor(s, brush)) {
+		com::nealrame::graph::Color color;
+		if (! parseColor(s, color)) {
 			std::string::const_iterator it = s.begin(), end = s.end();
 			return GradientGrammar<std::string::const_iterator>::parse(it, end, brush);
+		} else {
+			brush.setColor(color);
 		}
 		return true;
+	}
+
+	bool parseSize (const std::string &s, com::nealrame::graph::Size &size) {
+		std::string::const_iterator it = s.begin(), end = s.end();
+		return SizeGrammar<std::string::const_iterator>::parse(it, end, size);
 	}
 
 } /* namespace parser */

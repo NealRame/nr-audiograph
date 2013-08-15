@@ -25,13 +25,16 @@
 #include <GraphBrush.h>
 #include <GraphColor.h>
 #include <GraphError.h>
+#include <GraphLinearGradient.h>
+#include <GraphPoint.h>
 #include <GraphSize.h>
 #include <GraphSurface.h>
 
 #include "Parser.h"
 #include "WaveFormGenerator.h"
 
-#define VERSION_STRING "development"
+#define MORE_DETAILS 	"Type « audiograph --help » for more details."
+#define VERSION_STRING	"development"
 
 namespace com {
 namespace nealrame {
@@ -52,23 +55,48 @@ void validate(boost::any &v, const std::vector<std::string> &values, Brush *, in
 	}
 }
 
+void validate(boost::any &v, const std::vector<std::string> &values, Color *, int) {
+	namespace po = boost::program_options;
+	namespace parser = com::nealrame::parser;
+
+	po::validators::check_first_occurrence(v);
+	const std::string &s = po::validators::get_single_string(values);
+
+	Color color;
+
+	if (parser::parseColor(s, color)) {
+		v = color;
+	} else {
+		throw po::validation_error(po::validation_error::invalid_option_value);
+	}
+}
+
 void validate(boost::any &v, const std::vector<std::string> &values, Size *, int) {
 	namespace po = boost::program_options;
+
 	po::validators::check_first_occurrence(v);
-	po::validators::get_single_string(values);
-	// const std::string &s = po::validators::get_single_string(values);
-	v = boost::any(Size(1024, 256));
-} } } }
+	const std::string &s = po::validators::get_single_string(values);
+
+	Size size;
+
+	if (parser::parseSize(s, size)) {
+		v = size;
+	} else {
+		throw po::validation_error(po::validation_error::invalid_option_value);
+	}
+} 
+
+} } }
 
 using namespace com::nealrame;
 
-const graph::Brush DefaultBackground = graph::Brush(graph::Color::Black);
-const graph::Brush DefaultForeground = graph::Brush(graph::Color::White);
+const graph::Color DefaultBackground = graph::Color(graph::Color::RGB{0,0,0},0);
+const graph::Brush DefaultForeground = graph::Brush(graph::Color::Black);
 const graph::Size  DefaultSize       = graph::Size(1024, 256);
 
 namespace po = boost::program_options;
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv) {	
 	std::string input, output;
 
 	po::options_description common_options("Common options");
@@ -88,16 +116,16 @@ int main(int argc, char **argv) {
 	po::options_description render_options("Render options");
 	render_options.add_options()
 		(
-			"background,b", 
-			po::value<graph::Brush>()->default_value(DefaultBackground, "#000"),
+			"background,b",
+			po::value<graph::Color>()->default_value(DefaultBackground),
 			"set the background brush"
 		) (
 			"foreground,f", 
-			po::value<graph::Brush>()->default_value(DefaultForeground, "#fff"),
+			po::value<graph::Brush>()->default_value(DefaultForeground),
 			"set the foreground brush"
 		) (
 			"size,s",
-			po::value<graph::Size>()->default_value(DefaultSize, "1024x256"),
+			po::value<graph::Size>()->default_value(DefaultSize),
 			"set the waveform bounding box"
 		);
 
@@ -125,10 +153,17 @@ int main(int argc, char **argv) {
 
 	po::variables_map vm;
 
-	po::store(po::command_line_parser(argc, argv)
+	try {
+		po::store(po::command_line_parser(argc, argv)
 			.options(cmdline_options)
 			.positional(args).run(), vm);
-	po::notify(vm);
+		po::notify(vm);		
+	} catch (std::exception &err) {
+		std::cerr 
+			<< err.what() << std::endl 
+			<< MORE_DETAILS << std::endl;
+		return 1;
+	}
 
 	if (vm.count("help")) {
 		std::cout << (boost::format("Usage: %1% [options] file.[mp3|ogg|wav]")
@@ -144,20 +179,42 @@ int main(int argc, char **argv) {
 	}
 
 	if (! vm.count("input")) {
-		std::cerr << (boost::format("Argument missing.\nType « %1% --help » for more details.") 
-				% boost::filesystem::basename(argv[0])).str() << std::endl;
+		std::cerr
+			<< "Argument missing." << std::endl
+			<< MORE_DETAILS << std::endl;
 		return 1;
 	}
 
 	if (! vm.count("output")) {
-		boost::filesystem::path path(input);
-		output = (path.has_parent_path() ?
-				(boost::format("%1%/%2%.png") % path.parent_path().string() % path.stem().string())
-					: (boost::format("%1%.png") % path.stem().string())).str();
+		output = (boost::format("%1%.png") % boost::filesystem::path(input).stem().string()).str();
 	}
 
-	std::cout << "input: " << input << std::endl;
-	std::cout << "output: " << output << std::endl;
+	try {
+		WaveFormGenerator wfgenerator;
+
+		graph::Brush brush = vm["foreground"].as<graph::Brush>();
+		graph::Size size = vm["size"].as<graph::Size>();
+
+		if (brush.type() == graph::Brush::Type::Gradient) {
+			graph::LinearGradient &gradient(static_cast<graph::LinearGradient &>(brush.gradient()));
+			gradient.setStartPoint(graph::Point(0, 0));
+			gradient.setEndPoint(graph::Point(0, size.height()));
+		}
+
+		wfgenerator.setSize(size);
+		wfgenerator.setBackgroundColor(vm["background"].as<graph::Color>());
+		wfgenerator.setBrush(brush);
+
+		audio::Buffer *buffer = audio::Decoder::getDecoder(input)->decode(input);
+		graph::Surface *surface = wfgenerator.render(*buffer, 0, buffer->frameCount());
+
+		surface->exportToPNG(output);
+
+		delete buffer;
+		delete surface;
+	} catch (audio::Error &err) {
+	} catch (graph::Error &err) {
+	}
 
 	return 0;
 }

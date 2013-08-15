@@ -13,7 +13,8 @@
 		"translate_tabs_to_spaces": false,
 		"sublimeclang_options": [
 			"-I${project_path}/modules/nr-audio-lib/sources",
-			"-I${project_path}/modules/nr-graph-lib/sources"
+			"-I${project_path}/modules/nr-graph-lib/sources",
+			"-I/usr/include/cairo"
 		],
 		"sublimeclang_additional_language_options": {
 			"c++": [ "-std=c++11" ]
