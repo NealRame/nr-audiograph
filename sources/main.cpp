@@ -213,6 +213,10 @@ int main(int argc, char **argv) {
 		delete buffer;
 		delete surface;
 	} catch (audio::Error &err) {
+		std::cerr << (boost::format("Error while opening « %1% » !") % input).str() << std::endl;
+		std::cerr << "Make sure that file exists, is readable and is a supported audio format." << std::endl;
+		std::cerr << MORE_DETAILS << std::endl;
+		return 0;
 	} catch (graph::Error &err) {
 	}
 
