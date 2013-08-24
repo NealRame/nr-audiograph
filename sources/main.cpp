@@ -18,9 +18,10 @@
 
 #include <AudioBuffer.h>
 #include <AudioError.h>
+#include <codec/AudioDecoder.h>
 #include <codec/AudioMP3Decoder.h>
+#include <codec/AudioOggVorbisDecoder.h>
 #include <codec/AudioPCMDecoder.h>
-#include <codec/AudioPCMCoder.h>
 
 #include <GraphBrush.h>
 #include <GraphColor.h>
@@ -84,9 +85,7 @@ void validate(boost::any &v, const std::vector<std::string> &values, Size *, int
 	} else {
 		throw po::validation_error(po::validation_error::invalid_option_value);
 	}
-} 
-
-} } }
+} } } }
 
 using namespace com::nealrame;
 
@@ -98,6 +97,7 @@ namespace po = boost::program_options;
 
 int main(int argc, char **argv) {	
 	std::string input, output;
+	std::shared_ptr<audio::Decoder> decoder = nullptr;
 
 	po::options_description common_options("Common options");
 	common_options.add_options()
@@ -111,6 +111,14 @@ int main(int argc, char **argv) {
 		) (
 			"version,v", 
 			"print version string and exit"
+		);
+
+	po::options_description audio_options("Audio options");
+	audio_options.add_options()
+		(
+			"input-audio-format,I",
+			po::value<std::string>(),
+			"set the input audio format"
 		);
 
 	po::options_description render_options("Render options");
@@ -140,12 +148,14 @@ int main(int argc, char **argv) {
 	po::options_description cmdline_options;
 	cmdline_options
 		.add(common_options)
+		.add( audio_options)
 		.add(render_options)
 		.add(hidden_options);
 
 	po::options_description visible_options;
 	visible_options
 		.add(common_options)
+		.add( audio_options)
 		.add(render_options);
 
 	po::positional_options_description args;
@@ -189,6 +199,26 @@ int main(int argc, char **argv) {
 		output = (boost::format("%1%.png") % boost::filesystem::path(input).stem().string()).str();
 	}
 
+	if (vm.count("input-audio-format")) {
+		std::string audio_format = boost::to_lower_copy(vm["input-audio-format"].as<std::string>());
+		if (audio_format == "mp3") {
+			decoder.reset(new audio::MP3Decoder);
+		} else
+		if (audio_format == "oggvorbis") {
+			decoder.reset(new audio::OggVorbisDecoder);
+		} else 
+		if (audio_format == "pcm") {
+			decoder.reset(new audio::PCMDecoder);
+		} else {
+			std::cerr
+				<< "Unsupported audio format: " << audio_format << std::endl
+				<< MORE_DETAILS << std::endl;
+			return 1;
+		}
+	} else {
+		decoder.reset(audio::Decoder::getDecoder(input));
+	}
+
 	try {
 		WaveFormGenerator wfgenerator;
 
@@ -205,7 +235,7 @@ int main(int argc, char **argv) {
 		wfgenerator.setBackgroundColor(vm["background"].as<graph::Color>());
 		wfgenerator.setBrush(brush);
 
-		audio::Buffer *buffer = audio::Decoder::getDecoder(input)->decode(input);
+		audio::Buffer *buffer = decoder->decode(input);
 		graph::Surface *surface = wfgenerator.render(*buffer, 0, buffer->frameCount());
 
 		surface->exportToPNG(output);

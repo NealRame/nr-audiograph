@@ -71,7 +71,7 @@ graph::Surface * WaveFormGenerator::render(const audio::Buffer &buffer, uint off
 	double step = data->size.width()/count, h = data->size.height(), x = 0, p = 0;
 	float *samples;
 	float min = 0, max = 0;
-	unsigned int channel_count = buffer.format().channelCount;
+	unsigned int channel_count = buffer.format().channelCount();
 
 	samples = new float[channel_count*1024];
 
