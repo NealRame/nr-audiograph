@@ -8,10 +8,10 @@ $(TARGET): libnrgraph.a libnraudio.a $(OBJECTS)
 
 libnraudio.a:
 	$(MAKE) -C $(MODULES_PATH)/nr-audio-lib depends Release
-	@cp $(MODULES_PATH)/nr-audio-lib/Debug/libnraudio.a .
+	@cp $(MODULES_PATH)/nr-audio-lib/Release/libnraudio.a .
 
 libnrgraph.a:
 	$(MAKE) -C $(MODULES_PATH)/nr-graph-lib depends Release
-	@cp $(MODULES_PATH)/nr-graph-lib/Debug/libnrgraph.a .
+	@cp $(MODULES_PATH)/nr-graph-lib/Release/libnrgraph.a .
 
 include $(DEPS)
